@@ -43,5 +43,10 @@ namespace MauiAppMinhasCompras.Helpers
 
             return _conn.QueryAsync<Produto>(sql);
         }
+
+        internal async Task<List<Produto>> GetByCategory(string? selectedCategory)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

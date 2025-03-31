@@ -16,11 +16,27 @@ public partial class ListaProduto : ContentPage
 
     protected async override void OnAppearing()
     {
+        base.OnAppearing();
+        await AtualizarLista();
+    }
+
+    public async Task AtualizarLista()
+    {
         try
         {
             lista.Clear();
 
-            List<Produto> tmp = await App.Db.GetAll();
+            string selectedCategory = categoryPicker.SelectedItem?.ToString() ?? "Todos";
+
+            List<Produto> tmp;
+            if (selectedCategory == "Todos")
+            {
+                tmp = await App.Db.GetAll();
+            }
+            else
+            {
+                tmp = await App.Db.GetByCategory(selectedCategory);
+            }
 
             tmp.ForEach(i => lista.Add(i));
         }
@@ -49,8 +65,6 @@ public partial class ListaProduto : ContentPage
         {
             string q = e.NewTextValue;
 
-            lst_produtos.IsRefreshing = true;
-
             lista.Clear();
 
             List<Produto> tmp = await App.Db.Search(q);
@@ -60,10 +74,6 @@ public partial class ListaProduto : ContentPage
         catch (Exception ex)
         {
             await DisplayAlert("Ops", ex.Message, "OK");
-        }
-        finally
-        {
-            lst_produtos.IsRefreshing = false;
         }
     }
 
@@ -87,7 +97,7 @@ public partial class ListaProduto : ContentPage
             bool confirm = await DisplayAlert(
                 "Tem Certeza?", $"Remover {p.Descricao}?", "Sim", "Não");
 
-            if(confirm)
+            if (confirm)
             {
                 await App.Db.Delete(p.Id);
                 lista.Remove(p);
@@ -118,21 +128,21 @@ public partial class ListaProduto : ContentPage
 
     private async void lst_produtos_Refreshing(object sender, EventArgs e)
     {
-        try
-        {
-            lista.Clear();
+        await AtualizarLista();
+    }
+    private async void categoryPicker_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        await AtualizarLista();
+    }
+    private void ToolbarItem_Clicked_2(object sender, EventArgs e)
+    {
+        var totalPorCategoria = lista
+            .GroupBy(p => p.Categoria)
+            .Select(g => new { Categoria = g.Key, Total = g.Sum(p => p.Total) })
+            .ToList();
 
-            List<Produto> tmp = await App.Db.GetAll();
+        string msg = string.Join("\n", totalPorCategoria.Select(tc => $"{tc.Categoria}: {tc.Total:C}"));
 
-            tmp.ForEach(i => lista.Add(i));
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlert("Ops", ex.Message, "OK");
-
-        } finally
-        {
-            lst_produtos.IsRefreshing = false;
-        }
+        DisplayAlert("Total por Categoria", msg, "OK");
     }
 }
